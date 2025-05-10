@@ -7,8 +7,7 @@ from sklearn.model_selection import train_test_split
 
 from src.exceptions import CustomException
 from src.logger import logging
-
-
+from src.components.data_cleaning import DataCleaning
 from sklearn.model_selection import train_test_split
 from dataclasses import dataclass
 
@@ -39,3 +38,8 @@ class DataIngestion:
     
     def initiate_data_ingestion(self):
         df = pd.read_csv("notebook/data/")
+
+
+if __name__ == "__main__":
+    obj = DataCleaning()
+    obj.data_cleaning_process()
