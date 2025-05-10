@@ -11,9 +11,10 @@ from src.components.data_cleaning import DataCleaning
 from sklearn.model_selection import train_test_split
 from dataclasses import dataclass
 
-'''
+
 from src.components.data_transformation import DataTransformation
-from src.components.data_transformation import DataTransformationConfig
+from src.components.data_transformation import DataTransfomrationConfig
+'''
 
 from src.components.model_trainer import ModelTrainerConfig
 from src.components.model_trainer import ModelTrainer
@@ -73,3 +74,9 @@ if __name__ == "__main__":
 
     obj_2 = DataIngestion()
     train_data, test_data = obj_2.initiate_data_ingestion()
+
+    data_transformation=DataTransformation()
+    train_arr,test_arr,_=data_transformation.initiate_data_transformation(train_data,test_data)
+    print("*****")
+
+    
