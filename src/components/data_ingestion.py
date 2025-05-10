@@ -21,15 +21,14 @@ from src.components.model_trainer import ModelTrainer
 
 @dataclass
 class DataIngestionConfig:
+
+    cleaned_data_path = os.path.join("artifacts", "clean_data.csv")
     
     train_data_path = os.path.join("artifacts", "train.csv")
     test_data_path = os.path.join("artifacts", "test.csv")
     raw_data_path = os.path.join("artifacts", "data.csv")
 
-    Bengali_splling = os.path.join("artifacts","bangla_spelling_correction_dectionary.txt")
-    positive_word = os.path.join("artifacts", "Bengali_positive_word.txt")
-    negative_word = os.path.join("artifacts", "bengali_swear_word.txt")
-
+    
 
 class DataIngestion:
     def __init__(self):
@@ -37,9 +36,40 @@ class DataIngestion:
 
     
     def initiate_data_ingestion(self):
-        df = pd.read_csv("notebook/data/")
+        logging.info("Entered the data ingestion method or component")
+
+        try:
+            #create the folder aritfacts if not exist
+            os.makedirs(os.path.dirname(self.ingestion_confic.train_data_path), exist_ok=True)
+        
+            corpus = pd.read_csv("artifacts/clean_data.csv")
+            train_set, test_set = train_test_split(corpus, test_size=0.2, random_state= 15)
+
+            train_set.to_csv(self.ingestion_confic.train_data_path, index = False, header=True)
+            test_set.to_csv(self.ingestion_confic.test_data_path, index = False, header=True)
+
+            logging.info("Inmgestion of the data iss completed")
+
+            return (
+                self.ingestion_confic.train_data_path,
+                self.ingestion_confic.test_data_path
+            )          
+
+
+
+
+
+        except Exception as e:
+            raise CustomException(e, sys)
+        
+        
 
 
 if __name__ == "__main__":
+    #call the from data_cleaning.py to clean the dataset and store in the artifacts folder
     obj = DataCleaning()
     obj.data_cleaning_process()
+
+
+    obj_2 = DataIngestion()
+    train_data, test_data = obj_2.initiate_data_ingestion()

@@ -9,114 +9,11 @@ from string import punctuation
 from collections import Counter
 import re
 import os
-
-''' 
-
-def spell_correction(comments):
-
-    def dictionary():
-        myfile = open ("data/bangla_spelling_correction_dectionary.txt") 
-        d = { } 
-        for line in myfile: 
-            x = line.strip().split("\t") 
-            key, values = x[0], x[2:] 
-            d.setdefault(key, []).extend(values)
-        return d
-    
-    dictionary_tb = dictionary()
-    listOfItems = list(dictionary_tb.items())
-
-    #creat a list of the dictionary values
-    dictt_values=list(dictionary_tb.values())
-    listn=[]
-    for i in range (len(dictt_values)):
-        for j in range (len(dictt_values[i])):
-            listn.append(dictt_values[i][j])
-            
-    def find_in_list(word):
-        if word in listn:
-            return True
-        else:
-            return False
-
-    def getKeysByValue(valueToFind):
-        z=find_in_list(valueToFind)
-        if z== True:
-            for item  in listOfItems:
-                for items in item:
-                    for i in range (len(items)):
-                        if items[i] == valueToFind:
-                            return item[0]
-        else:
-            return valueToFind
-                                
-                    
-    def pass_comment(comments):
-        comment= comments
-        for word in comment:
-            word=str(word)
-            listOfKeys = str(getKeysByValue(word))
-            for i in range(len(comment)):
-                if comment[i]==word:
-                    comment[i]=listOfKeys
-        return ' '.join(map(str, comment)) 
-
-'''
-
-'''
-
-def correct_bangla_spelling(comments):
-    # Load dictionary and prepare data structures
-    def load_dictionary():
-        myfile = open("data/bangla_spelling_correction_dectionary.txt") 
-        d = {} 
-        for line in myfile: 
-            x = line.strip().split("\t") 
-            key, values = x[0], x[2:] 
-            d.setdefault(key, []).extend(values)
-        return d
-    
-    dictionary_tb = load_dictionary()
-    listOfItems = list(dictionary_tb.items())
-    
-    # Create a list of all dictionary values
-    dictt_values = list(dictionary_tb.values())
-    listn = []
-    for i in range(len(dictt_values)):
-        for j in range(len(dictt_values[i])):
-            listn.append(dictt_values[i][j])
-            
-    def find_in_list(word):
-        return word in listn
-
-    def getKeysByValue(valueToFind):
-        if find_in_list(valueToFind):
-            for item in listOfItems:
-                for items in item:
-                    for i in range(len(items)):
-                        if items[i] == valueToFind:
-                            return item[0]
-        return valueToFind
-                                
-    # Process the comments
-    comment_list = comments.split()  # Split input string into words
-    for i in range(len(comment_list)):
-        word = str(comment_list[i])
-        corrected_word = str(getKeysByValue(word))
-        if corrected_word != word:
-            comment_list[i] = corrected_word
-            
-    return ' '.join(comment_list)
-
-
-
-'''
-
-
+from src.utils import save_object, load_object
 
 class DataCleaningConfig:
     data_cleaning_file_path = os.path.join("artifacts", "clean_data.csv")
-    data_transform_file_path = os.path.join("artifacts", "process_data.csv")
+    #data_transform_file_path = os.path.join("artifacts", "process_data.csv")
 
 
 class DataCleaning:
@@ -163,7 +60,7 @@ class DataCleaning:
 
 
 
-    def  pass_comment(self, comments):
+    def  spell_correction(self, comments):
         # Load dictionary and prepare data structures
         def load_dictionary():
             myfile = open("notebook/data/bangla_spelling_correction_dectionary.txt") 
@@ -282,7 +179,7 @@ class DataCleaning:
 
 
         corpus['token1']=(corpus['process_comments'].apply(lambda comment: comment.strip().split(" ")))
-        corpus['spell_correct_with_emo'] = corpus['token1'].apply(lambda comment: self.pass_comment(comment))
+        corpus['spell_correct_with_emo'] = corpus['token1'].apply(lambda comment: self.spell_correction(comment))
 
 
 
@@ -302,70 +199,33 @@ class DataCleaning:
         columns_name=['comments','process_comments','spell_correct_with_emo','spell_correct_without_emo','likes','Related_to_post','punc_number','emoji_number','abusive_word_number', 'positive_word_number', 'Bsentiment','label']
         #df = corpus.to_csv('data_after_cleaning.csv', index=False, columns=columns_name)
 
+
+        corpus_to_store = corpus[columns_name]
+                #create the pkl file of the data cleaning
+        '''        
+        save_object(
+            file_path=self.data_cleaning_config.data_cleaning_file_path,
+            obj = corpus_to_store
+        )
+        '''
+
+        '''
         #store the csv file in the specific folder
         folder_path = "notebook/data"
         os.makedirs(folder_path, exist_ok=True)
-        file_path = os.path.join(folder_path,"data_after_cleaning.csv")
-        corpus.to_csv(file_path, index=False, columns=columns_name)
+        file_path = os.path.join(folder_path,"clean_data.csv")
+        corpus.to_csv(file_path, index=False, columns=columns_name)'''
 
 
+        #save the clean data in the artifacts folder
+        os.makedirs(os.path.dirname(self.data_cleaning_config.data_cleaning_file_path), exist_ok=True)
+        corpus.to_csv(self.data_cleaning_config.data_cleaning_file_path,index=False, columns=columns_name, header= True )
+
+        
 
 
-
-    
-
+        
 
 
-'''
-if __name__=="__main__":
-    spcolumn = ["comments", "likes", "label", "Bsentiment", "Related_to_post"]
-    #corpus = pd.read_csv("added data new 500.csv", usecols=spcolumn)
-    corpus = pd.read_csv("notebook/data/data_preprocessing_file.csv", usecols=spcolumn)
+        
 
-    corpus["comments"]= corpus['comments'].astype(str)
-    
-    corpus['url_extract'] = corpus['comments'].apply(lambda comment:url_remove(comment))
-    corpus['punc_number'] = corpus['url_extract'].apply(lambda comment: punctuation_number(comment))
-    corpus['emoji_number'] = corpus['comments'].apply(lambda comment:emoji_count(comment))
-    corpus['process_comments'] = corpus['url_extract'].apply(lambda comment: remove_punc(comment))
-
-
-    # comment='Nick doctor magi'
-    # words = comment.strip().split(" ")
-    # print(words)
-    # pass_comment(words)
-
-    corpus['token1']=(corpus['process_comments'].apply(lambda comment: comment.strip().split(" ")))
-    corpus['spell_correct_with_emo'] = corpus['token1'].apply(lambda comment: pass_comment(comment))
-
-
-
-
-    corpus['process_comments']=corpus['process_comments'].astype(str)
-    corpus["spell_correct_without_emo"]= corpus['spell_correct_with_emo'].apply(lambda comment: remove_emoji(comment))
-    corpus.loc[[1]]
-
-
-    corpus['abusive_word_number']=corpus['spell_correct_without_emo'].apply(lambda comment: abusive_word_number(comment))
-
-
-    
-    corpus['positive_word_number']=corpus['spell_correct_with_emo'].apply(lambda comment: positive_word_number(comment))
-    print (corpus.loc[[28]])
-    
-    columns_name=['comments','process_comments','spell_correct_with_emo','spell_correct_without_emo','likes','Related_to_post','punc_number','emoji_number','abusive_word_number', 'positive_word_number', 'Bsentiment','label']
-    #df = corpus.to_csv('data_after_cleaning.csv', index=False, columns=columns_name)
-
-    #store the csv file in the specific folder
-    folder_path = "notebook/data"
-    os.makedirs(folder_path, exist_ok=True)
-    file_path = os.path.join(folder_path,"data_after_cleaning.csv")
-    corpus.to_csv(file_path, index=False, columns=columns_name)
-
-    '''
-
-
-
-
-
-    
