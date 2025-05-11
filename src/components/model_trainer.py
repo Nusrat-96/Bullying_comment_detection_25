@@ -5,6 +5,7 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.svm import SVC
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import AdaBoostClassifier
+from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import r2_score
 from sklearn.metrics import classification_report, accuracy_score
 
@@ -27,26 +28,36 @@ class ModelTrainer:
     def initiate_model_trainer(self, X_train, Y_train, X_test, Y_test):
         
         try:
-            '''
+            
             models = {
-                "Random_Forest": RandomForestClassifier(n_estimators=170, random_state=4),
-                "SVM": SVC(kernel="linear", degree=1, C=4)
+                "Random_Forest": RandomForestClassifier(),
+                "SVM": SVC(),
+                "KNN":KNeighborsClassifier(),
+                "Adaboost": AdaBoostClassifier(),
+                "NaiveBayes": MultinomialNB()
             }
 
-            '''
+            
             params = {
                 "Random_Forest": {
-                    "n_estimators": [150, 170],
-                    "random_state": [42]  # Standard practice to use a single fixed random state
+                    "n_estimators": [170],
+                    "random_state": [3]  # Standard practice to use a single fixed random state
                 },
                 "SVM": {
                     "kernel": ["linear", "rbf"],  # Corrected spelling and added options
                     "C": [0.1, 1, 10],          # More reasonable C values
                     "gamma": ['scale', 'auto']   # Important for rbf kernel
-                }
+                },
+                "KNN": {"n_neighbors":[3]},
+                "Adaboost":{
+                    'learning_rate':[.1,.01,0.5,.001],
+                    # 'loss':['linear','square','exponential'],
+                    'n_estimators': [8,16,32,64,128,256]
+                },
+                "NaiveBayes": {"alpha":[0.5,1.0]}
             }
-            '''
-            params = 0
+            
+            
             model_report:dict=evaluate_models(X_train=X_train, Y_train=Y_train,
                                                X_test=X_test, Y_test = Y_test,
                                                 models=models,param=params)
@@ -73,18 +84,16 @@ class ModelTrainer:
 
             predicted=best_model.predict(X_test)
 
-            r2_square = r2_score(Y_test, predicted)
-            return r2_square
+            r2_square = accuracy_score(Y_test, predicted)
+            return r2_square, best_model_name, model_report
+            
+
             '''
-
-
-
             model = RandomForestClassifier(n_estimators=170, random_state=3)
             model.fit(X_train, Y_train)
             predict = model.predict(X_test)
             print(accuracy_score(Y_test,predict))
-
-
+            '''
 
             
         except Exception as e:
