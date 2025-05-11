@@ -167,7 +167,7 @@ class DataCleaning:
     def data_cleaning_process(self):
         spcolumn = ["comments", "likes", "label", "Bsentiment", "Related_to_post"]
     #corpus = pd.read_csv("added data new 500.csv", usecols=spcolumn)
-        corpus = pd.read_csv("notebook/data/data_preprocessing_file.csv", usecols=spcolumn)
+        corpus = pd.read_csv("notebook/data/data_set_2025.csv", usecols=spcolumn)
 
         corpus["comments"]= corpus['comments'].astype(str)
         

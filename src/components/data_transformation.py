@@ -16,6 +16,7 @@ from src.logger import logging
 import os
 
 from src.utils import save_object
+from sklearn.preprocessing import FunctionTransformer
 
 
 class DataTransfomrationConfig:
@@ -39,23 +40,28 @@ class DataTransformation:
                                  'abusive_word_number',
                                  'positive_word_number']
             
+
             ''''
-            numerical_pipeline = Pipeline(steps=[("imputer", SimpleImputer(strategy="median")),
-                                                 ("scaler", StandardScaler())])
-            
+            # Fixed numerical pipeline
+            numerical_pipeline = Pipeline([
+                ('selector', FunctionTransformer(lambda x: x[numerical_feature], validate=False)),
+                ('imputer', SimpleImputer(strategy="median")),
+                ('scaler', StandardScaler())
+            ])
+
+            # Fixed categorical pipeline
             categorical_pipeline = Pipeline([
-                ('tfidf', TfidfVectorizer(ngram_range=(1,1)))])
+                ('selector', FunctionTransformer(lambda x: x[categorical_feature].squeeze(), validate=False)),
+                ('tfidf', TfidfVectorizer(ngram_range=(1,1)))
+            ])
 
-            preprocessor = ColumnTransformer(
-                [
-                    ("categoricalPipe", categorical_pipeline, categorical_feature),
-                    ("numericalPipe", numerical_pipeline, numerical_feature)
-                ]
-            )
+            
+            
             '''
-
             preprocessor = ColumnTransformer([('vectorizer', TfidfVectorizer(ngram_range=(1,1)), "spell_correct_without_emo",)],
                                              remainder="passthrough")
+            
+
             logging.info("Get the Preprocessor Object")
             return preprocessor
 
@@ -88,14 +94,25 @@ class DataTransformation:
 
             preprocessing_obj= self.get_data_transform_obj()
             input_feature_train_arr = preprocessing_obj.fit_transform(input_feature_train_df)
-            input_feature_test_arr = preprocessing_obj.fit(input_feature_test_df)
+            input_feature_test_arr = preprocessing_obj.transform(input_feature_test_df)
 
             #concatenates transformed
-
-            ''''
-            train_arr = np.c_[input_feature_train_arr, np.array(target_feature_train_df)]
-            test_arr = np.c_[input_feature_test_arr, np.array(target_feature_test_df)]
             '''
+            # Safe concatenation with sparse matrix support
+            def safe_concatenate(features, targets):
+                # Convert sparse to dense if needed
+                if hasattr(features, 'toarray'):
+                    features = features.toarray()
+                # Ensure targets are 2D
+                targets = np.array(targets).reshape(-1, 1)
+                return np.hstack([features, targets])
+
+            
+            train_arr = safe_concatenate(input_feature_train_arr, target_feature_train_df)
+            test_arr = safe_concatenate(input_feature_test_arr, target_feature_test_df)
+            '''
+
+            
 
             save_object(
                 file_path=self.data_trans_config.processor_file_path,
@@ -105,7 +122,9 @@ class DataTransformation:
 
             return (
                 input_feature_train_arr,
+                target_feature_train_df,
                 input_feature_test_arr,
+                target_feature_test_df,
                 self.data_trans_config.processor_file_path
             )
         
