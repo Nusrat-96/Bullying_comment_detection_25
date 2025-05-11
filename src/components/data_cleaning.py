@@ -1,231 +1,142 @@
-#this file will clean the data before transform it to preferable ML input
-
 import pandas as pd
 import numpy as np
 import string
 import emoji
 import emojis
 from string import punctuation
-from collections import Counter
 import re
 import os
-from src.utils import save_object, load_object
+import pickle
+from sklearn.base import BaseEstimator, TransformerMixin
+from src.utils import save_object
+
+
 
 class DataCleaningConfig:
-    data_cleaning_file_path = os.path.join("artifacts", "clean_data.csv")
-    #data_transform_file_path = os.path.join("artifacts", "process_data.csv")
+    data_cleaning_file_path = os.path.join("artifacts", "data_cleaner.pkl")
 
-
-class DataCleaning:
-
+class DataCleaner(BaseEstimator, TransformerMixin):
+    """Reusable data cleaning object that can be pickled"""
     def __init__(self):
-        self.data_cleaning_config = DataCleaningConfig()
-    #data preprocessing
-
+        # Load resources once during initialization
+        self._load_spelling_dictionary()
+        self._load_abusive_words()
+        self._load_positive_words()
+        
+    def _load_spelling_dictionary(self):
+        """Load spelling correction dictionary"""
+        self.spelling_dict = {}
+        with open("notebook/data/bangla_spelling_correction_dectionary.txt", "r", encoding="utf-8") as f:
+            for line in f:
+                parts = line.strip().split("\t")
+                if len(parts) >= 3:
+                    correct = parts[0]
+                    incorrect = parts[2:]
+                    for word in incorrect:
+                        self.spelling_dict[word] = correct
+    
+    def _load_abusive_words(self):
+        """Load abusive words list"""
+        with open('notebook/data/bengali_swear_word.txt', 'r', encoding="utf8") as f:
+            self.abusive_words = set()
+            for line in f:
+                words = line.strip().split("\t")
+                self.abusive_words.update(words)
+    
+    def _load_positive_words(self):
+        """Load positive words list"""
+        with open('notebook/data/Bengali_positive_word.txt', 'r', encoding="utf8") as f:
+            self.positive_words = set()
+            for line in f:
+                words = line.strip().split("\t")
+                self.positive_words.update(words)
+    
     def url_remove(self, comment):
-        comment_lower = str(comment.lower())
-        url = re.compile(r'https?://\S+|www.\\S+')
-        comment_extract_url = url.sub(r'', comment_lower)
-        return comment_extract_url                
-
-    #emoji count
+        comment = str(comment).lower()
+        return re.sub(r'https?://\S+|www\.\S+', '', comment)
+    
     def emoji_count(self, comment):
-        emo = emojis.count(comment)
-        return emo
-
+        return emojis.count(comment)
+    
     def remove_emoji(self, comment):
-                                                            #return emoji.demojize(comment) #convert emoji to text
-        return emoji.replace_emoji(comment, replace='') 
-
-
-    #punctuation count
+        return emoji.replace_emoji(comment, replace='')
+    
     def punctuation_number(self, comment):
-        punctuation_counts = 0
-        for i in comment:
-            if i in string.punctuation:
-                punctuation_counts = punctuation_counts+1
-        return punctuation_counts
-
-
-    #remove puctuation
-    def remove_punc(self, comments):
-        comment = str(comments)
+        return sum(1 for char in str(comment) if char in string.punctuation)
+    
+    def remove_punc(self, comment):
+        comment = str(comment)
         punctuations = '''()-[]{};:"',<>./?@#$%^*_~\n\r'''
         no_punc = ""
         for char in comment:
             if char not in punctuations:
                 no_punc=no_punc+char
         return no_punc
-
-
-
-
-    def  spell_correction(self, comments):
-        # Load dictionary and prepare data structures
-        def load_dictionary():
-            myfile = open("notebook/data/bangla_spelling_correction_dectionary.txt") 
-            d = {} 
-            for line in myfile: 
-                x = line.strip().split("\t") 
-                key, values = x[0], x[2:] 
-                d.setdefault(key, []).extend(values)
-            return d
+    
+    def spell_correction(self, text):
+        words = str(text).split()
+        corrected = [self.spelling_dict.get(word, word) for word in words]
+        return ' '.join(corrected)     
+    
+    def abusive_word_number(self, text):
+        words = set(re.sub(' +', ' ', str(text).strip()).split())
+        return len(words & self.abusive_words)
+    
+    def positive_word_number(self, text):
+        words = set(re.sub(' +', ' ', str(text).strip()).split())
+        return len(words & self.positive_words)
+    
+    def transform(self, df):
+        """Clean the input DataFrame"""
+        df = df.copy()
+        df["comments"] = df['comments'].astype(str)
         
-        dictionary_tb = load_dictionary()
-        listOfItems = list(dictionary_tb.items())
+        # Apply cleaning steps
+        df['url_extract'] = df['comments'].apply(self.url_remove)
+        df['punc_number'] = df['url_extract'].apply(self.punctuation_number)
+        df['emoji_number'] = df['comments'].apply(self.emoji_count)
+        df['process_comments'] = df['url_extract'].apply(self.remove_punc)
+
+        df['token1']=(df['process_comments'].apply(lambda comment: comment.strip().split(" ")))
+
+
+        df['spell_correct_with_emo'] = df['token1'].apply(self.spell_correction)
+        df['spell_correct_without_emo'] = df['spell_correct_with_emo'].apply(self.remove_emoji)
+        df['abusive_word_number'] = df['spell_correct_without_emo'].apply(self.abusive_word_number)
+        df['positive_word_number'] = df['spell_correct_with_emo'].apply(self.positive_word_number)
         
-        # Create a list of all dictionary values
-        dictt_values = list(dictionary_tb.values())
-        listn = []
-        for i in range(len(dictt_values)):
-            for j in range(len(dictt_values[i])):
-                listn.append(dictt_values[i][j])
-                
-        def find_in_list(word):
-            return word in listn
-
-        def getKeysByValue(valueToFind):
-            if find_in_list(valueToFind):
-                for item in listOfItems:
-                    for items in item:
-                        for i in range(len(items)):
-                            if items[i] == valueToFind:
-                                return item[0]
-            return valueToFind
-                                    
-        comment= comments
-        for word in comment:
-            word=str(word)
-            listOfKeys = str(getKeysByValue(word))
-            for i in range(len(comment)):
-                if comment[i]==word:
-                    comment[i]=listOfKeys
-        return ' '.join(map(str, comment))      
-
-
-
+        # Select final columns
+        columns = ['comments', 'process_comments', 'spell_correct_with_emo',
+                  'spell_correct_without_emo', 'likes', 'Related_to_post',
+                  'punc_number', 'emoji_number', 'abusive_word_number',
+                  'positive_word_number', 'Bsentiment', 'label']
         
+        return df[columns]
+    
+    def fit(self, X, y=None):
+        return self
 
-    #count abusive word            
-    def abusive_word_number(self, comment):
-
-            #covert abusive word text file to list 
-        with open('notebook/data/bengali_swear_word.txt','r',encoding="utf8") as f:
-            listabusive=[]
-            for line in f:
-                strip_lines=line.strip()
-                listli=strip_lines.split("\t")
-
-                for i in range (len(listli)):
-                    m=listabusive.append(listli[i])
-
-            listabusiveSet = set(listabusive)
-
-
-        comment = comment.strip()  #remove leading and ending whitespace
-        comment=re.sub(' +', ' ',  comment)  #replace multiple whitespace
-        comment=comment.split(' ') #convert string to list 
-        
-        save=[]
-        for w in listabusiveSet:
-            for word in comment:
-                if w==word:
-                    save.append(word)
-        return len(save)
-
-
-
-
-
-        
-    #count positive word            
-    def positive_word_number(self, comment):
-
-        with open('notebook/data/Bengali_positive_word.txt','r', encoding="utf8") as f:
-            listPositive=[]
-            for line in f:
-                strip_lines=line.strip()
-                listlp=strip_lines.split("\t")
-
-                for i in range (len(listlp)):
-                    m=listPositive.append(listlp[i])
-            listPositiveSet = set (listPositive)
-
-
-        comment = comment.strip()  #remove leading and ending whitespace
-        comment=re.sub(' +', ' ',  comment)  #replace multiple whitespace
-        comment=comment.split(' ') #convert string to list 
-        save=[]
-        for w in listPositiveSet:
-            for word in comment:
-                if w==word:
-                    save.append(word)
-        return len(save)
-
-
-
+class DataCleaning:
+    def __init__(self):
+        self.data_cleaning_config = DataCleaningConfig()
+        self.cleaner = DataCleaner()
+    
     def data_cleaning_process(self):
-        spcolumn = ["comments", "likes", "label", "Bsentiment", "Related_to_post"]
-    #corpus = pd.read_csv("added data new 500.csv", usecols=spcolumn)
-        corpus = pd.read_csv("notebook/data/data_set_2025.csv", usecols=spcolumn)
-
-        corpus["comments"]= corpus['comments'].astype(str)
+        # Load raw data
+        corpus = pd.read_csv("notebook/data/data_set_2025.csv", 
+                           usecols=["comments", "likes", "label", "Bsentiment", "Related_to_post"])
         
-        corpus['url_extract'] = corpus['comments'].apply(lambda comment:self.url_remove(comment))
-        corpus['punc_number'] = corpus['url_extract'].apply(lambda comment: self.punctuation_number(comment))
-        corpus['emoji_number'] = corpus['comments'].apply(lambda comment:self.emoji_count(comment))
-        corpus['process_comments'] = corpus['url_extract'].apply(lambda comment: self.remove_punc(comment))
-
-
-
-        corpus['token1']=(corpus['process_comments'].apply(lambda comment: comment.strip().split(" ")))
-        corpus['spell_correct_with_emo'] = corpus['token1'].apply(lambda comment: self.spell_correction(comment))
-
-
-
-
-        corpus['process_comments']=corpus['process_comments'].astype(str)
-        corpus["spell_correct_without_emo"]= corpus['spell_correct_with_emo'].apply(lambda comment: self.remove_emoji(comment))
-        corpus.loc[[1]]
-
-
-        corpus['abusive_word_number']=corpus['spell_correct_without_emo'].apply(lambda comment: self.abusive_word_number(comment))
-
-
+        # Clean data
+        cleaned_data = self.cleaner.transform(corpus)
         
-        corpus['positive_word_number']=corpus['spell_correct_with_emo'].apply(lambda comment: self.positive_word_number(comment))
-        print (corpus.loc[[28]])
-        
-        columns_name=['comments','process_comments','spell_correct_with_emo','spell_correct_without_emo','likes','Related_to_post','punc_number','emoji_number','abusive_word_number', 'positive_word_number', 'Bsentiment','label']
-        #df = corpus.to_csv('data_after_cleaning.csv', index=False, columns=columns_name)
-
-
-        corpus_to_store = corpus[columns_name]
-                #create the pkl file of the data cleaning
-        '''        
-        save_object(
-            file_path=self.data_cleaning_config.data_cleaning_file_path,
-            obj = corpus_to_store
-        )
-        '''
-
-        '''
-        #store the csv file in the specific folder
-        folder_path = "notebook/data"
-        os.makedirs(folder_path, exist_ok=True)
-        file_path = os.path.join(folder_path,"clean_data.csv")
-        corpus.to_csv(file_path, index=False, columns=columns_name)'''
-
-
-        #save the clean data in the artifacts folder
+        # Save cleaned data
         os.makedirs(os.path.dirname(self.data_cleaning_config.data_cleaning_file_path), exist_ok=True)
-        corpus.to_csv(self.data_cleaning_config.data_cleaning_file_path,index=False, columns=columns_name, header= True )
-
+        cleaned_data.to_csv(self.data_cleaning_config.data_cleaning_file_path, index=False)
         
-
-
+        # Save the cleaning object
+        save_object(
+            file_path=os.path.join("artifacts", "data_cleaner.pkl"),
+            obj=self.cleaner
+        )
         
-
-
-        
-
+        return cleaned_data

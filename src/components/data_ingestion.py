@@ -69,7 +69,8 @@ class DataIngestion:
 if __name__ == "__main__":
     #call the from data_cleaning.py to clean the dataset and store in the artifacts folder
     obj = DataCleaning()
-    obj.data_cleaning_process()
+    df = obj.data_cleaning_process()
+    print (df.head(5))
 
 
     obj_2 = DataIngestion()
@@ -83,6 +84,7 @@ if __name__ == "__main__":
 
     modeltrainer=ModelTrainer()
     print(modeltrainer.initiate_model_trainer(X_train, Y_train, X_test, Y_test))
+    
 
     
 
