@@ -88,6 +88,7 @@ class DataCleaner(BaseEstimator, TransformerMixin):
     
     def transform(self, df):
         """Clean the input DataFrame"""
+        Original_df = df
         df = df.copy()
         df["comments"] = df['comments'].astype(str)
         
@@ -106,12 +107,19 @@ class DataCleaner(BaseEstimator, TransformerMixin):
         df['positive_word_number'] = df['spell_correct_with_emo'].apply(self.positive_word_number)
         
         # Select final columns
+        '''
         columns = ['comments', 'process_comments', 'spell_correct_with_emo',
                   'spell_correct_without_emo', 'likes', 'Related_to_post',
                   'punc_number', 'emoji_number', 'abusive_word_number',
-                  'positive_word_number', 'Bsentiment', 'label']
+                  'positive_word_number', 'label']
         
-        return df[columns]
+        new_columns = ['spell_correct_without_emo', 'likes', 'Related_to_post',
+                  'punc_number', 'emoji_number', 'abusive_word_number',
+                  'positive_word_number']
+        '''
+        column_not_needed = ["url_extract", 'token1', 'spell_correct_with_emo'] 
+        
+        return df.drop(columns= column_not_needed)
     
     def fit(self, X, y=None):
         return self
@@ -121,10 +129,8 @@ class DataCleaning:
         self.data_cleaning_config = DataCleaningConfig()
         self.cleaner = DataCleaner()
     
-    def data_cleaning_process(self):
+    def data_cleaning_process(self, corpus):
         # Load raw data
-        corpus = pd.read_csv("notebook/data/data_set_2025.csv", 
-                           usecols=["comments", "likes", "label", "Bsentiment", "Related_to_post"])
         
         # Clean data
         cleaned_data = self.cleaner.transform(corpus)

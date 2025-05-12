@@ -68,11 +68,15 @@ class DataIngestion:
 
 if __name__ == "__main__":
     #call the from data_cleaning.py to clean the dataset and store in the artifacts folder
+
+
+    corpus = pd.read_csv("notebook/data/data_set_2025.csv", 
+                           usecols=["comments", "likes", "label", "Related_to_post"])
+    
     obj = DataCleaning()
-    df = obj.data_cleaning_process()
+    df = obj.data_cleaning_process(corpus)
     print (df.head(5))
-
-
+    
     obj_2 = DataIngestion()
     train_data, test_data = obj_2.initiate_data_ingestion()
 
@@ -81,7 +85,6 @@ if __name__ == "__main__":
     print("*****")
     
     
-
     modeltrainer=ModelTrainer()
     print(modeltrainer.initiate_model_trainer(X_train, Y_train, X_test, Y_test))
     

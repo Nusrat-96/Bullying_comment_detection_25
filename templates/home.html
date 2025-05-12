@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Comment Bullying Detector</title>
+</head>
+<body>
+    <h2>Comment Bullying Detection Form</h2>
+
+    <form method="POST" action="/predictdata">
+        <label for="comments">Comment:</label><br>
+        <textarea id="comments" name="comments" rows="4" cols="50" required>{{ request.form.get('comments', '') }}</textarea><br><br>
+
+        <label for="likes">Likes:</label><br>
+        <input type="number" id="likes" name="likes" required value="{{ request.form.get('likes', '') }}"><br><br>
+
+        <label for="Related_to_post">Related to Post (0 or 1):</label><br>
+        <input type="number" id="Related_to_post" name="Related_to_post" min="0" max="1" required value="{{ request.form.get('Related_to_post', '') }}"><br><br>
+
+        <input type="submit" value="Detect">
+    </form>
+
+    {% if results is not none %}
+        <h3 style="color: green;">Prediction Result: {{ results }}</h3>
+    {% endif %}
+</body>
+</html>
