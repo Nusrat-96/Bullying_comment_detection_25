@@ -2,11 +2,12 @@
 
 ## Table of Contents
 1. [Description](#description)
-2. [Technology Stack](#technology Stack)
-3. [Dataset](#dataset)
-4. [Models](#models)
-5. [Result](#result)
+2. [Technology Stack](#technology-stack)
+3. [Prerequisites](#prerequisites)
+4. [Usage](#usage)
 6. [Conclusion](#conclusion)
+
+
 
 
 ---
@@ -55,15 +56,27 @@ This work contributes to mitigating online harassment by automating the detectio
 
 
 
+## Prerequisites
 
-## Dataset
+Be sure you have the following installed on your development machine:
+
+- Python 3.12
+- Flask
+- Git
+- pip
+- Virtualenv
 
 
+## Usage
+```bash
+git clone [repo-url]
+pip3 install -r "requirements.txt"
 
+python3 src/components/data_ingestion.py
+python3 app.py    # run the application locally
 
-## Result
-
-naive bayes
+```
 
 ## Conclusion
-rew o
+After evaluating multiple machine learning models (Random Forest, SVM, KNN, and Naive Bayes) for detecting transliterated Bengali bullying comments, Naive Bayes achieved the highest accuracy of 69.9% on our dataset. 
+
